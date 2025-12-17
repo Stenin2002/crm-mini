@@ -2,76 +2,154 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Mini CRM – Sales Pipeline</title>
+  <title>Mini-CRM Sales Pipeline</title>
 
-  <!-- Firebase SDKs -->
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
   <style>
     body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background: #f4f6f8;
+      margin: 0;
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      background: #f1f3f6;
+      color: #222;
     }
-    h1, h2 {
-      color: #333;
+
+    header {
+      background: #1f2937;
+      color: white;
+      padding: 24px;
+      text-align: center;
     }
-    section {
+
+    .container {
+      max-width: 1100px;
+      margin: 30px auto;
+      padding: 0 20px;
+      display: grid;
+      gap: 30px;
+    }
+
+    .card {
       background: white;
-      padding: 15px;
-      margin-bottom: 20px;
-      border-radius: 6px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     }
+
+    h2 {
+      margin-top: 0;
+      border-bottom: 2px solid #e5e7eb;
+      padding-bottom: 10px;
+    }
+
     input, textarea, select {
       width: 100%;
-      padding: 8px;
-      margin: 6px 0;
-    }
-    button {
       padding: 10px;
+      margin-top: 8px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+
+    textarea {
+      resize: vertical;
+    }
+
+    button {
+      margin-top: 12px;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 5px;
+      background: #2563eb;
+      color: white;
+      font-size: 14px;
       cursor: pointer;
     }
+
+    button:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+
+    .status {
+      margin-top: 10px;
+      font-weight: 600;
+    }
+
+    .error {
+      color: #b91c1c;
+    }
+
+    .success {
+      color: #047857;
+    }
+
     .lead {
-      padding: 10px;
-      border-bottom: 1px solid #ddd;
+      padding: 12px 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .lead:last-child {
+      border-bottom: none;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      background: #e5e7eb;
+      margin-left: 6px;
+    }
+
+    .insight {
+      font-size: 16px;
+      margin: 6px 0;
     }
   </style>
 </head>
 
 <body>
 
-<h1>Mini-CRM Sales Pipeline</h1>
+<header>
+  <h1>Mini-CRM Sales Pipeline</h1>
+  <p>Cloud-based lead management and real-time insights</p>
+</header>
 
-<!-- ================= PUBLIC MODULE ================= -->
-<section>
-  <h2>Public Lead Submission</h2>
+<div class="container">
 
-  <input id="name" placeholder="Name">
-  <input id="email" placeholder="Email">
-  <input id="company" placeholder="Company">
-  <input id="value" type="number" placeholder="Estimated Deal Value">
-  <textarea id="message" placeholder="Message"></textarea>
+  <!-- PUBLIC -->
+  <div class="card">
+    <h2>Public Lead Submission</h2>
 
-  <button onclick="submitLead()">Submit Lead</button>
-  <p id="publicStatus"></p>
-</section>
+    <input id="name" placeholder="Full Name">
+    <input id="email" placeholder="Email Address">
+    <input id="company" placeholder="Company">
+    <input id="value" type="number" placeholder="Estimated Deal Value (€)">
+    <textarea id="message" placeholder="Message"></textarea>
 
-<!-- ================= STAFF MODULE ================= -->
-<section>
-  <h2>Staff Sales Pipeline</h2>
-  <div id="leads"></div>
-</section>
+    <button id="submitBtn" onclick="submitLead()">Submit Lead</button>
+    <div id="publicStatus" class="status"></div>
+  </div>
 
-<!-- ================= INSIGHTS MODULE ================= -->
-<section>
-  <h2>Pipeline Insights</h2>
-  <div id="insights"></div>
-</section>
+  <!-- STAFF -->
+  <div class="card">
+    <h2>Staff Sales Pipeline</h2>
+    <div id="leads"></div>
+  </div>
+
+  <!-- INSIGHTS -->
+  <div class="card">
+    <h2>Pipeline Insights</h2>
+    <div id="insights"></div>
+  </div>
+
+</div>
 
 <script>
-/* ========== FIREBASE CONFIG (REPLACE THIS) ========== */
+/* ===== FIREBASE CONFIG ===== */
 const firebaseConfig = {
   apiKey: "AIzaSyAOlXmtbxpPQtB7tZJAW7mo448QMJ4Pn_4",
   authDomain: "mini-crm-9083a.firebaseapp.com",
@@ -80,17 +158,23 @@ const firebaseConfig = {
   messagingSenderId: "529154007688",
   appId: "1:529154007688:web:9a6c18a9c6668a38c7753d"
 };
-/* =================================================== */
+/* ========================== */
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-/* ========== CREATE LEAD ========== */
+/* ===== SUBMIT LEAD ===== */
 function submitLead() {
+  publicStatus.textContent = "";
+  publicStatus.className = "status";
+
   if (!name.value || !email.value) {
-    publicStatus.innerText = "Name and Email are required.";
+    publicStatus.textContent = "Name and Email are required.";
+    publicStatus.classList.add("error");
     return;
   }
+
+  submitBtn.disabled = true;
 
   db.collection("leads").add({
     name: name.value,
@@ -102,13 +186,19 @@ function submitLead() {
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   })
   .then(() => {
-    publicStatus.innerText = "Lead submitted successfully.";
+    publicStatus.textContent = "Lead submitted successfully.";
+    publicStatus.classList.add("success");
+
     name.value = email.value = company.value = value.value = message.value = "";
   })
-  .catch(err => publicStatus.innerText = err.message);
+  .catch(err => {
+    publicStatus.textContent = err.message;
+    publicStatus.classList.add("error");
+  })
+  .finally(() => submitBtn.disabled = false);
 }
 
-/* ========== REAL-TIME PIPELINE + INSIGHTS ========== */
+/* ===== REAL-TIME PIPELINE + INSIGHTS ===== */
 db.collection("leads").orderBy("createdAt", "desc")
 .onSnapshot(snapshot => {
   leads.innerHTML = "";
@@ -122,7 +212,8 @@ db.collection("leads").orderBy("createdAt", "desc")
 
     leads.innerHTML += `
       <div class="lead">
-        <strong>${l.name}</strong> (${l.company})<br>
+        <strong>${l.name}</strong> — ${l.company || "N/A"}
+        <span class="badge">${l.stage}</span><br>
         Value: €${l.value}<br>
         Stage:
         <select onchange="updateStage('${doc.id}', this.value)">
@@ -135,14 +226,14 @@ db.collection("leads").orderBy("createdAt", "desc")
   });
 
   insights.innerHTML = `
-    <p><strong>Total Pipeline Value:</strong> €${totalValue}</p>
+    <div class="insight"><strong>Total Pipeline Value:</strong> €${totalValue}</div>
     ${Object.keys(stageCounts)
-      .map(s => `<p>${s}: ${stageCounts[s]}</p>`)
+      .map(s => `<div class="insight">${s}: ${stageCounts[s]}</div>`)
       .join("")}
   `;
 });
 
-/* ========== UPDATE STAGE ========== */
+/* ===== UPDATE STAGE ===== */
 function updateStage(id, stage) {
   db.collection("leads").doc(id).update({ stage });
 }
