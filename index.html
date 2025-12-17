@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Mini CRM – Sales Pipeline</title>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    body { font-family: Arial; margin: 20px; }
+    section { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; }
+    h2 { margin-top: 0; }
+    input, textarea, select { margin: 5px 0; width: 100%; }
+    button { margin-top: 10px; }
+  </style>
+</head>
+
+<body>
+
+<h1>Mini-CRM Sales Pipeline</h1>
+
+<!-- ================= PUBLIC MODULE ================= -->
+<section>
+  <h2>Public Lead Submission</h2>
+
+  <input id="name" placeholder="Name">
+  <input id="email" placeholder="Email">
+  <input id="company" placeholder="Company">
+  <input id="value" type="number" placeholder="Estimated Deal Value">
+  <textarea id="message" placeholder="Message"></textarea>
+
+  <button onclick="submitLead()">Submit Lead</button>
+  <p id="publicStatus"></p>
+</section>
+
+<!-- ================= STAFF MODULE ================= -->
+<section>
+  <h2>Staff Sales Pipeline</h2>
+  <div id="leads"></div>
+</section>
+
+<!-- ================= INSIGHTS MODULE ================= -->
+<section>
+  <h2>Pipeline Insights</h2>
+  <div id="insights"></div>
+</section>
+
+<script>
+/* ================= FIREBASE CONFIG ================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyAOlXmtbxpPQtB7tZJAW7mo448QMJ4Pn_4",
+  authDomain: "mini-crm-9083a.firebaseapp.com",
+  projectId: "mini-crm-9083a",
+  storageBucket: "mini-crm-9083a.firebasestorage.app",
+  messagingSenderId: "529154007688",
+  appId: "1:529154007688:web:9a6c18a9c6668a38c7753d"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+/* ================= PUBLIC: CREATE LEAD ================= */
+function submitLead() {
+  if (!name.value || !email.value) {
+    publicStatus.innerText = "Name and Email required";
+    return;
+  }
+
+  db.collection("leads").add({
+    name: name.value,
+    email: email.value,
+    company: company.value,
+    value: Number(value.value) || 0,
+    message: message.value,
+    stage: "New",
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  })
+  .then(() => {
+    publicStatus.innerText = "Lead submitted successfully";
+    name.value = email.value = company.value = value.value = message.value = "";
+  })
+  .catch(err => publicStatus.innerText = err.message);
+}
+
+/* ================= STAFF: REAL-TIME PIPELINE ================= */
+db.collection("leads").orderBy("createdAt", "desc")
+.onSnapshot(snapshot => {
+  leads.innerHTML = "";
+  let stageCount = {};
+  let totalValue = 0;
+
+  snapshot.forEach(doc => {
+    const l = doc.data();
+    stageCount[l.stage] = (stageCount[l.stage] || 0) + 1;
+    if (l.stage !== "Lost") totalValue += l.value;
+
+    leads.innerHTML += `
+      <div>
+        <strong>${l.name}</strong> (${l.company})<br>
+        Value: €${l.value}<br>
+        Stage:
+        <select onchange="updateStage('${doc.id}', this.value)">
+          ${["New","Contacted","Qualified","Proposal","Won","Lost"]
+            .map(s => `<option ${s===l.stage?"selected":""}>${s}</option>`)}
+        </select>
+      </div><hr>
+    `;
+  });
+
+  /* ================= INSIGHTS ================= */
+  insights.innerHTML = `
+    <p><strong>Total Pipeline Value:</strong> €${totalValue}</p>
+    ${Object.keys(stageCount)
+      .map(s => `<p>${s}: ${stageCount[s]}</p>`)
+      .join("")}
+  `;
+});
+
+/* ================= UPDATE STAGE ================= */
+function updateStage(id, stage) {
+  db.collection("leads").doc(id).update({ stage });
+}
+</script>
+
+</body>
+</html>
