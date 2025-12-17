@@ -1,18 +1,42 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
   <title>Mini CRM – Sales Pipeline</title>
 
-  <!-- Firebase -->
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
   <style>
-    body { font-family: Arial; margin: 20px; }
-    section { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; }
-    h2 { margin-top: 0; }
-    input, textarea, select { margin: 5px 0; width: 100%; }
-    button { margin-top: 10px; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f4f6f8;
+    }
+    h1, h2 {
+      color: #333;
+    }
+    section {
+      background: white;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 6px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+    input, textarea, select {
+      width: 100%;
+      padding: 8px;
+      margin: 6px 0;
+    }
+    button {
+      padding: 10px;
+      cursor: pointer;
+    }
+    .lead {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+    }
   </style>
 </head>
 
@@ -47,7 +71,7 @@
 </section>
 
 <script>
-/* ================= FIREBASE CONFIG ================= */
+/* ========== FIREBASE CONFIG (REPLACE THIS) ========== */
 const firebaseConfig = {
   apiKey: "AIzaSyAOlXmtbxpPQtB7tZJAW7mo448QMJ4Pn_4",
   authDomain: "mini-crm-9083a.firebaseapp.com",
@@ -56,14 +80,15 @@ const firebaseConfig = {
   messagingSenderId: "529154007688",
   appId: "1:529154007688:web:9a6c18a9c6668a38c7753d"
 };
+/* =================================================== */
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-/* ================= PUBLIC: CREATE LEAD ================= */
+/* ========== CREATE LEAD ========== */
 function submitLead() {
   if (!name.value || !email.value) {
-    publicStatus.innerText = "Name and Email required";
+    publicStatus.innerText = "Name and Email are required.";
     return;
   }
 
@@ -77,47 +102,47 @@ function submitLead() {
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   })
   .then(() => {
-    publicStatus.innerText = "Lead submitted successfully";
+    publicStatus.innerText = "Lead submitted successfully.";
     name.value = email.value = company.value = value.value = message.value = "";
   })
   .catch(err => publicStatus.innerText = err.message);
 }
 
-/* ================= STAFF: REAL-TIME PIPELINE ================= */
+/* ========== REAL-TIME PIPELINE + INSIGHTS ========== */
 db.collection("leads").orderBy("createdAt", "desc")
 .onSnapshot(snapshot => {
   leads.innerHTML = "";
-  let stageCount = {};
+  let stageCounts = {};
   let totalValue = 0;
 
   snapshot.forEach(doc => {
     const l = doc.data();
-    stageCount[l.stage] = (stageCount[l.stage] || 0) + 1;
+    stageCounts[l.stage] = (stageCounts[l.stage] || 0) + 1;
     if (l.stage !== "Lost") totalValue += l.value;
 
     leads.innerHTML += `
-      <div>
+      <div class="lead">
         <strong>${l.name}</strong> (${l.company})<br>
         Value: €${l.value}<br>
         Stage:
         <select onchange="updateStage('${doc.id}', this.value)">
           ${["New","Contacted","Qualified","Proposal","Won","Lost"]
-            .map(s => `<option ${s===l.stage?"selected":""}>${s}</option>`)}
+            .map(s => `<option ${s===l.stage?"selected":""}>${s}</option>`)
+            .join("")}
         </select>
-      </div><hr>
+      </div>
     `;
   });
 
-  /* ================= INSIGHTS ================= */
   insights.innerHTML = `
     <p><strong>Total Pipeline Value:</strong> €${totalValue}</p>
-    ${Object.keys(stageCount)
-      .map(s => `<p>${s}: ${stageCount[s]}</p>`)
+    ${Object.keys(stageCounts)
+      .map(s => `<p>${s}: ${stageCounts[s]}</p>`)
       .join("")}
   `;
 });
 
-/* ================= UPDATE STAGE ================= */
+/* ========== UPDATE STAGE ========== */
 function updateStage(id, stage) {
   db.collection("leads").doc(id).update({ stage });
 }
