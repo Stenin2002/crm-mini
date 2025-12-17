@@ -4,14 +4,23 @@
   <meta charset="UTF-8">
   <title>Mini-CRM Sales Pipeline</title>
 
-  <!-- Firebase -->
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
+  <!-- CSS RESET -->
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+  </style>
+
+  <!-- APP STYLES -->
   <style>
     body {
-      margin: 0;
-      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      font-family: Arial, Helvetica, sans-serif;
       background: #f1f3f6;
       color: #222;
     }
@@ -33,23 +42,24 @@
 
     .card {
       background: white;
-      border-radius: 8px;
       padding: 20px;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
       box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     }
 
     h2 {
-      margin-top: 0;
+      margin-bottom: 12px;
       border-bottom: 2px solid #e5e7eb;
-      padding-bottom: 10px;
+      padding-bottom: 6px;
     }
 
     input, textarea, select {
       width: 100%;
       padding: 10px;
-      margin-top: 8px;
-      border-radius: 5px;
+      margin: 8px 0 12px 0;
       border: 1px solid #ccc;
+      border-radius: 5px;
       font-size: 14px;
     }
 
@@ -58,14 +68,13 @@
     }
 
     button {
-      margin-top: 12px;
       padding: 10px 16px;
-      border: none;
-      border-radius: 5px;
       background: #2563eb;
       color: white;
-      font-size: 14px;
+      border: none;
+      border-radius: 5px;
       cursor: pointer;
+      font-size: 14px;
     }
 
     button:disabled {
@@ -75,7 +84,7 @@
 
     .status {
       margin-top: 10px;
-      font-weight: 600;
+      font-weight: bold;
     }
 
     .error {
@@ -97,16 +106,16 @@
 
     .badge {
       display: inline-block;
-      padding: 4px 8px;
-      border-radius: 12px;
-      font-size: 12px;
       background: #e5e7eb;
+      border-radius: 12px;
+      padding: 4px 8px;
+      font-size: 12px;
       margin-left: 6px;
     }
 
     .insight {
-      font-size: 16px;
       margin: 6px 0;
+      font-size: 16px;
     }
   </style>
 </head>
@@ -120,12 +129,12 @@
 
 <div class="container">
 
-  <!-- PUBLIC -->
+  <!-- PUBLIC MODULE -->
   <div class="card">
     <h2>Public Lead Submission</h2>
 
-    <input id="name" placeholder="Full Name">
-    <input id="email" placeholder="Email Address">
+    <input id="leadName" placeholder="Full Name">
+    <input id="leadEmail" placeholder="Email Address">
     <input id="company" placeholder="Company">
     <input id="value" type="number" placeholder="Estimated Deal Value (€)">
     <textarea id="message" placeholder="Message"></textarea>
@@ -134,13 +143,13 @@
     <div id="publicStatus" class="status"></div>
   </div>
 
-  <!-- STAFF -->
+  <!-- STAFF MODULE -->
   <div class="card">
     <h2>Staff Sales Pipeline</h2>
     <div id="leads"></div>
   </div>
 
-  <!-- INSIGHTS -->
+  <!-- INSIGHTS MODULE -->
   <div class="card">
     <h2>Pipeline Insights</h2>
     <div id="insights"></div>
@@ -149,7 +158,7 @@
 </div>
 
 <script>
-/* ===== FIREBASE CONFIG ===== */
+/* ========== FIREBASE CONFIG (REPLACE THIS) ========== */
 const firebaseConfig = {
   apiKey: "AIzaSyAOlXmtbxpPQtB7tZJAW7mo448QMJ4Pn_4",
   authDomain: "mini-crm-9083a.firebaseapp.com",
@@ -158,82 +167,98 @@ const firebaseConfig = {
   messagingSenderId: "529154007688",
   appId: "1:529154007688:web:9a6c18a9c6668a38c7753d"
 };
-/* ========================== */
+/* =================================================== */
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-/* ===== SUBMIT LEAD ===== */
+/* ========== SUBMIT LEAD ========== */
 function submitLead() {
-  publicStatus.textContent = "";
-  publicStatus.className = "status";
+  const leadName = document.getElementById("leadName").value.trim();
+  const leadEmail = document.getElementById("leadEmail").value.trim();
 
-  if (!name.value || !email.value) {
-    publicStatus.textContent = "Name and Email are required.";
-    publicStatus.classList.add("error");
+  const statusEl = document.getElementById("publicStatus");
+  const submitBtn = document.getElementById("submitBtn");
+
+  statusEl.textContent = "";
+  statusEl.className = "status";
+
+  if (!leadName || !leadEmail) {
+    statusEl.textContent = "Name and Email are required.";
+    statusEl.classList.add("error");
     return;
   }
 
   submitBtn.disabled = true;
 
   db.collection("leads").add({
-    name: name.value,
-    email: email.value,
-    company: company.value,
-    value: Number(value.value) || 0,
-    message: message.value,
+    name: leadName,
+    email: leadEmail,
+    company: document.getElementById("company").value,
+    value: Number(document.getElementById("value").value) || 0,
+    message: document.getElementById("message").value,
     stage: "New",
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   })
   .then(() => {
-    publicStatus.textContent = "Lead submitted successfully.";
-    publicStatus.classList.add("success");
+    statusEl.textContent = "Lead submitted successfully.";
+    statusEl.classList.add("success");
 
-    name.value = email.value = company.value = value.value = message.value = "";
+    document.getElementById("leadName").value = "";
+    document.getElementById("leadEmail").value = "";
+    document.getElementById("company").value = "";
+    document.getElementById("value").value = "";
+    document.getElementById("message").value = "";
   })
   .catch(err => {
-    publicStatus.textContent = err.message;
-    publicStatus.classList.add("error");
+    statusEl.textContent = err.message;
+    statusEl.classList.add("error");
   })
-  .finally(() => submitBtn.disabled = false);
+  .finally(() => {
+    submitBtn.disabled = false;
+  });
 }
 
-/* ===== REAL-TIME PIPELINE + INSIGHTS ===== */
+/* ========== REAL-TIME PIPELINE + INSIGHTS ========== */
 db.collection("leads").orderBy("createdAt", "desc")
 .onSnapshot(snapshot => {
-  leads.innerHTML = "";
-  let stageCounts = {};
+  const leadsEl = document.getElementById("leads");
+  const insightsEl = document.getElementById("insights");
+
+  leadsEl.innerHTML = "";
+  insightsEl.innerHTML = "";
+
   let totalValue = 0;
+  let stageCounts = {};
 
   snapshot.forEach(doc => {
     const l = doc.data();
+
     stageCounts[l.stage] = (stageCounts[l.stage] || 0) + 1;
     if (l.stage !== "Lost") totalValue += l.value;
 
-    leads.innerHTML += `
+    leadsEl.innerHTML += `
       <div class="lead">
-        <strong>${l.name}</strong> — ${l.company || "N/A"}
+        <strong>${l.name}</strong> (${l.company || "N/A"})
         <span class="badge">${l.stage}</span><br>
         Value: €${l.value}<br>
         Stage:
         <select onchange="updateStage('${doc.id}', this.value)">
           ${["New","Contacted","Qualified","Proposal","Won","Lost"]
-            .map(s => `<option ${s===l.stage?"selected":""}>${s}</option>`)
+            .map(s => `<option ${s === l.stage ? "selected" : ""}>${s}</option>`)
             .join("")}
         </select>
       </div>
     `;
   });
 
-  insights.innerHTML = `
-    <div class="insight"><strong>Total Pipeline Value:</strong> €${totalValue}</div>
-    ${Object.keys(stageCounts)
-      .map(s => `<div class="insight">${s}: ${stageCounts[s]}</div>`)
-      .join("")}
-  `;
+  insightsEl.innerHTML += `<div class="insight"><strong>Total Pipeline Value:</strong> €${totalValue}</div>`;
+  Object.keys(stageCounts).forEach(stage => {
+    insightsEl.innerHTML += `<div class="insight">${stage}: ${stageCounts[stage]}</div>`;
+  });
 });
 
-/* ===== UPDATE STAGE ===== */
+/* ========== UPDATE STAGE ========== */
 function updateStage(id, stage) {
   db.collection("leads").doc(id).update({ stage });
 }
